@@ -1,24 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
 
     <menuitem
         id="menu_perpustakaan_root"
         name="Perpustakaan"
         sequence="10"
     />
-    <menuitem
-        id="menu_master_data"
-        name="Master Data"
-        parent="menu_perpustakaan_root"
-        sequence="10"
-    />
+
+
     <menuitem
         id="menu_perpustakaan_buku"
-        name="Kategori Buku"
-        parent="menu_master_data"
-        action="action_kategori_buku"
+        name="Data Buku"
+        parent="menu_perpustakaan_root"
+        action="data_buku_action"
         sequence="10"
     />
+
+
+    <menuitem
+        id="menu_perpustakaan_kategori"
+        name="Kategori Buku"
+        parent="menu_perpustakaan_root"
+        action="action_kategori_buku"
+        sequence="20"
+    />
+
+
+    <menuitem
+        id="menu_perpustakaan_siswa"
+        name="Data Siswa"
+        parent="menu_perpustakaan_root"
+        action="data_siswa_action"
+        sequence="30"
+    />
+
+
+    <menuitem
+        id="menu_perpustakaan_pinjam"
+        name="Pinjam Buku"
+        parent="menu_perpustakaan_root"
+        action="pinjam_buku_action"
+        sequence="40"
+    />
+
 </odoo>
-
-
-

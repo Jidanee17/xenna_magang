@@ -1,5 +1,5 @@
 # Odoo runtime
-data/
+/data/
 *.log
 
 # Python
