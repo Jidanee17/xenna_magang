@@ -4,8 +4,8 @@ from odoo.exceptions import ValidationError
 
 class EquipmentLoan(models.Model):
     _name = 'equipment.loan'
-    _description = 'Equipment Loan'
-    _order = 'loan_date desc, id desc'
+    _description = '  Equipment Loan'
+    _order = ' loan_date desc, id desc'
 
     name = fields.Char(
         string='Nomor Peminjaman',
@@ -88,8 +88,6 @@ class EquipmentLoan(models.Model):
         compute='_compute_equipment_names'
     )
 
-
-
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -120,7 +118,6 @@ class EquipmentLoan(models.Model):
                         'dari tanggal peminjaman.'
                     )
 
-    @api.constrains('equipment_id', 'state')
     @api.constrains('loan_line_ids', 'state')
     def _check_double_booking(self):
         for record in self:
@@ -221,7 +218,7 @@ class EquipmentLoan(models.Model):
         if loans:
             loans.write({
                 'state': 'late',
-                'line_notes':'kamu sudah terlambat'
+                'line_notes': 'kamu sudah terlambat'
             })
 
     @api.depends('loan_date', 'return_date')
@@ -245,6 +242,7 @@ class EquipmentLoan(models.Model):
                 record.loan_line_ids.mapped('equipment_id.name')
             )
 
+
 class EquipmentLoanLine(models.Model):
     _name = 'equipment.loan.line'
     _description = 'Equipment Loan Line'
@@ -262,5 +260,3 @@ class EquipmentLoanLine(models.Model):
         required=True,
         ondelete='restrict'
     )
-
-

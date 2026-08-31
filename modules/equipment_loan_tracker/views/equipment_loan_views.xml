@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-
     <record id="view_equipment_loan_list" model="ir.ui.view">
         <field name="name">equipment.loan.list</field>
         <field name="model">equipment.loan</field>
         <field name="arch" type="xml">
-           <list string="Equipment Loans">
+            <list string="Equipment Loans"
+                  decoration-info="state == 'draft'"
+                  decoration-warning="state == 'ongoing'"
+                  decoration-danger="state == 'late'"
+                  decoration-muted="state == 'returned'">
                 <field name="name"/>
                 <field name="borrower_id"/>
                 <field name="borrower_email"/>
@@ -21,7 +24,6 @@
         </field>
     </record>
 
-
     <record id="view_equipment_loan_form" model="ir.ui.view">
         <field name="name">equipment.loan.form</field>
         <field name="model">equipment.loan</field>
@@ -31,25 +33,25 @@
                 <header>
 
                     <button
-                        name="action_confirm"
-                        type="object"
-                        string="Confirm"
-                        class="btn-primary"
-                        invisible="state != 'draft'"
+                            name="action_confirm"
+                            type="object"
+                            string="Confirm"
+                            class="btn-primary"
+                            invisible="state != 'draft'"
                     />
 
                     <button
-                        name="action_return"
-                        type="object"
-                        string="Return"
-                        class="btn-primary"
-                        invisible="state not in ('ongoing', 'late')"
+                            name="action_return"
+                            type="object"
+                            string="Return"
+                            class="btn-primary"
+                            invisible="state not in ('ongoing', 'late')"
                     />
 
                     <field
-                        name="state"
-                        widget="statusbar"
-                        statusbar_visible="draft,ongoing,returned,late"
+                            name="state"
+                            widget="statusbar"
+                            statusbar_visible="draft,ongoing,returned,late"
                     />
 
                 </header>
@@ -59,18 +61,22 @@
                     <group>
                         <group>
                             <field name="name" readonly="1"/>
+                            <field name="type"/>
                         </group>
                         <group>
                             <field name="borrower_id"/>
+                            <field name="borrower_email"/>
+                            <field name="borrower_phone"/>
                         </group>
 
                         <group>
                             <field name="loan_date"/>
                             <field name="due_date"/>
                             <field
-                                name="return_date"
-                                readonly="1"
+                                    name="return_date"
+                                    readonly="1"
                             />
+                            <field name="loan_duration"/>
                         </group>
                     </group>
                     <separator string="Daftar Alat"/>
@@ -89,11 +95,70 @@
         </field>
     </record>
 
+    <record id="view_equipment_loan_search" model="ir.ui.view">
+        <field name="name">equipment.loan.search</field>
+        <field name="model">equipment.loan</field>
+        <field name="arch" type="xml">
+            <search string="Search Equipment Loans">
+                <field name="name" string="Nomor Peminjaman"/>
+                <field name="borrower_id" string="Peminjam"/>
+                <field
+                        name="loan_line_ids"
+                        string="Alat"
+                        filter_domain="[('loan_line_ids.equipment_id.name', 'ilike', self)]"
+                />
+                <field name="loan_date"/>
+                <field name="due_date"/>
+
+                <filter
+                        string="Draft"
+                        name="filter_draft"
+                        domain="[('state', '=', 'draft')]"
+                />
+                <filter
+                        string="Ongoing"
+                        name="filter_ongoing"
+                        domain="[('state', '=', 'ongoing')]"
+                />
+                <filter
+                        string="Returned"
+                        name="filter_returned"
+                        domain="[('state', '=', 'returned')]"
+                />
+                <filter
+                        string="Late"
+                        name="filter_late"
+                        domain="[('state', '=', 'late')]"
+                />
+
+                <separator/>
+
+                <group expand="0" string="Group By">
+                    <filter
+                            string="Status"
+                            name="groupby_state"
+                            context="{'group_by': 'state'}"
+                    />
+                    <filter
+                            string="Peminjam"
+                            name="groupby_borrower"
+                            context="{'group_by': 'borrower_id'}"
+                    />
+                    <filter
+                            string="Tanggal Peminjaman"
+                            name="groupby_loan_date"
+                            context="{'group_by': 'loan_date'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
 
     <record id="action_equipment_loan" model="ir.actions.act_window">
         <field name="name">Equipment Loans</field>
         <field name="res_model">equipment.loan</field>
         <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_equipment_loan_search"/>
     </record>
 
 </odoo>

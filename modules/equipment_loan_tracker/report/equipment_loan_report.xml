@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
     <record id="action_report_equipment_loan" model="ir.actions.report">
         <field name="name">Bukti Peminjaman</field>
         <field name="model">equipment.loan</field>
@@ -21,22 +22,25 @@
                         <p class="text-center">
                             Equipment Loan Tracker
                         </p>
-                        <hr/>
-                        <table class="table table-bordered">
+                        <br/>
+                        <table style="width: 100%;">
+
                             <tr>
-                                <td>
-                                    <strong>No. Peminjaman</strong>
+                                <td style="width: 35%;">
+                                    <strong>No Peminjam</strong>
                                 </td>
                                 <td>
+                                    :
                                     <span t-field="loan.name"/>
                                 </td>
                             </tr>
 
                             <tr>
-                                <td>
+                                <td style="width: 35%;">
                                     <strong>Peminjam</strong>
                                 </td>
                                 <td>
+                                    :
                                     <span t-field="loan.borrower_id"/>
                                 </td>
                             </tr>
@@ -46,25 +50,17 @@
                                     <strong>Alat</strong>
                                 </td>
                                 <td>
-                                    <span t-field="loan.equipment_id.name"/>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <strong>Kode Inventaris</strong>
-                                </td>
-                                <td>
-                                    <span t-field="loan.equipment_id.code"/>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <strong>Kategori</strong>
-                                </td>
-                                <td>
-                                    <span t-field="loan.equipment_id.category"/>
+                                    :
+                                    <table style="display: inline-table; vertical-align: top; border-collapse: collapse;">
+                                        <tr t-foreach="loan.loan_line_ids" t-as="line">
+                                            <td style="padding: 0 4px 0 0; vertical-align: top; white-space: nowrap;">
+                                                <span t-esc="line_index + 1"/>.
+                                            </td>
+                                            <td style="padding: 0; vertical-align: top;">
+                                                <span t-field="line.equipment_id.name"/>
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </td>
                             </tr>
 
@@ -73,6 +69,7 @@
                                     <strong>Tanggal Peminjaman</strong>
                                 </td>
                                 <td>
+                                    :
                                     <span t-field="loan.loan_date"/>
                                 </td>
                             </tr>
@@ -82,37 +79,19 @@
                                     <strong>Tanggal Jatuh Tempo</strong>
                                 </td>
                                 <td>
+                                    :
                                     <span t-field="loan.due_date"/>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <strong>Tanggal Pengembalian</strong>
-                                </td>
-                                <td>
-                                    <span t-field="loan.return_date"/>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td>
-                                    <strong>Status</strong>
-                                </td>
-                                <td>
-                                    <span t-field="loan.state"/>
                                 </td>
                             </tr>
                         </table>
                         <br/>
-                        <strong>Catatan:</strong>
+                        <br/>
                         <p>
-                            <span t-field="loan.line_notes"/>
+                            Dengan ini dinyatakan bahwa peminjam telah
+                            melakukan peminjaman alat sesuai dengan data
+                            yang tercantum di atas.
                         </p>
-
                         <br/>
-                        <br/>
-
                         <div class="text-center">
                             <small>
                                 Bukti peminjaman ini dibuat secara otomatis
@@ -124,4 +103,5 @@
             </t>
         </t>
     </template>
+
 </odoo>
