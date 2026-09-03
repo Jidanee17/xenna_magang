@@ -1,0 +1,36 @@
+# CATATAN: ini BUKAN file utuh untuk menimpa __manifest__.py kamu.
+# Ini referensi bagian yang perlu ditambah/diubah di manifest ASLI kamu.
+
+{
+    'name': 'Equipment Loan Tracker',
+    'version': '1.1',
+    'summary': 'Peminjaman alat terintegrasi Inventory & Invoicing',
+    'category': 'Inventory',
+
+    # PENTING: tambahkan 'stock' dan 'account' di sini.
+    # 'stock' wajib untuk stock.picking/stock.move/stock.location.
+    # 'account' wajib untuk account.move (invoice denda).
+    'depends': ['base', 'mail', 'stock', 'account'],
+
+    'data': [
+        'security/ir.model.access.csv',
+
+        # data harus dimuat SEBELUM views yang mereferensikannya
+        'data/equipment_loan_sequence.xml',
+        'data/equipment_loan_cron.xml',
+        'data/equipment_loan_stock_data.xml',   # BARU
+
+        'views/equipment_loan_views.xml',
+        'views/product_template_views.xml',      # BARU
+        'views/borrower_views.xml',
+
+        'report/equipment_loan_report.xml',
+
+        # HAPUS baris ini kalau masih ada:
+        # 'views/equipment_item_views.xml',
+    ],
+
+    'installable': True,
+    'application': True,
+    'license': 'LGPL-3',
+}

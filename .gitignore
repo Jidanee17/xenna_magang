@@ -1,11 +1,19 @@
 # Odoo runtime
 /data/
 *.log
+filestore/
+sessions/
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+
+# Virtual environment
+.venv/
+venv/
+env/
 
 # macOS
 .DS_Store
@@ -16,3 +24,4 @@ __pycache__/
 
 # Local configuration
 odoo.conf
+.env
