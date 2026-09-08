@@ -24,6 +24,7 @@ Module untuk mengelola:
         'data/equipment_loan_sequence.xml',
         'data/equipment_loan_stock_data.xml',
         'data/equipment_loan_cron.xml',
+        'data/equipment_loan_mail_template.xml',
         'views/borrower_views.xml',
         'views/equipment_loan_views.xml',
         'report/equipment_loan_report.xml',

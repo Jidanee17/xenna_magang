@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mail_template_equipment_loan_reminder" model="mail.template">
+        <field name="name">Equipment Loan - H-1 Reminder</field>
+        <field name="model_id" ref="model_equipment_loan"/>
+        <field name="subject">Reminder Pengembalian Alat - {{ object.name }}</field>
+        <field name="email_from">{{ user.email_formatted or user.company_id.email or '' }}</field>
+        <field name="email_to">{{ object.borrower_id.email or '' }}</field>
+
+        <field name="body_html" type="html">
+            <div>
+                <p>Halo
+                    <strong>
+                        <t t-out="object.borrower_id.name"/>
+                    </strong>
+                    ,
+                </p>
+
+                <p>
+                    Ini adalah pengingat bahwa peminjaman alat Anda
+                    akan jatuh tempo besok.
+                </p>
+
+                <p>
+                    <strong>Nomor Peminjaman:</strong>
+                    <t t-out="object.name"/>
+                </p>
+
+                <p>
+                    <strong>Tanggal Jatuh Tempo:</strong>
+                    <t t-out="object.due_date"/>
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    <t t-out="object.state"/>
+                </p>
+
+                <p>
+                    <strong>Daftar Alat:</strong>
+                </p>
+
+                <ul>
+                    <t t-foreach="object.loan_line_ids" t-as="line">
+                        <li>
+                            <t t-out="line.equipment_id.display_name"/>
+                            —
+                            Serial:
+                            <t t-out="line.lot_id.name"/>
+                        </li>
+                    </t>
+                </ul>
+
+                <p>
+                    Mohon mengembalikan alat sebelum atau pada tanggal
+                    jatuh tempo.
+                </p>
+
+                <p>Terima kasih.</p>
+            </div>
+        </field>
+    </record>
+
+
+    <record id="mail_template_equipment_loan_overdue" model="mail.template">
+        <field name="name">Equipment Loan - Overdue Notification</field>
+        <field name="model_id" ref="model_equipment_loan"/>
+        <field name="subject">Peminjaman Alat Terlambat - {{ object.name }}</field>
+        <field name="email_from">{{ user.email_formatted or user.company_id.email or '' }}</field>
+        <field name="email_to">{{ object.borrower_id.email or '' }}</field>
+
+        <field name="body_html" type="html">
+            <div>
+                <p>Halo
+                    <strong>
+                        <t t-out="object.borrower_id.name"/>
+                    </strong>
+                    ,
+                </p>
+
+                <p>
+                    Peminjaman alat berikut telah melewati
+                    tanggal jatuh tempo.
+                </p>
+
+                <p>
+                    <strong>Nomor Peminjaman:</strong>
+                    <t t-out="object.name"/>
+                </p>
+
+                <p>
+                    <strong>Tanggal Jatuh Tempo:</strong>
+                    <t t-out="object.due_date"/>
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    <t t-out="object.state"/>
+                </p>
+
+                <p>
+                    <strong>Daftar Alat:</strong>
+                </p>
+
+                <ul>
+                    <t t-foreach="object.loan_line_ids" t-as="line">
+                        <li>
+                            <t t-out="line.equipment_id.display_name"/>
+                            —
+                            Serial:
+                            <t t-out="line.lot_id.name"/>
+                        </li>
+                    </t>
+                </ul>
+
+                <p>
+                    Mohon segera mengembalikan alat yang masih dipinjam.
+                </p>
+
+                <p>Terima kasih.</p>
+            </div>
+        </field>
+    </record>
+
+</odoo>

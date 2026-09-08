@@ -85,6 +85,18 @@ class EquipmentLoan(models.Model):
         string='Catatan'
     )
 
+    reminder_email_sent = fields.Boolean(
+        string='Reminder Email Terkirim',
+        default=False,
+        copy=False,
+    )
+
+    overdue_email_sent = fields.Boolean(
+        string='Overdue Email Terkirim',
+        default=False,
+        copy=False,
+    )
+
     equipment_names = fields.Char(
         string='Daftar Alat',
         compute='_compute_equipment_names'
@@ -152,23 +164,43 @@ class EquipmentLoan(models.Model):
                         'dari tanggal peminjaman.'
                     )
 
-    @api.constrains('loan_line_ids', 'state')
+    @api.constrains(
+        'loan_date',
+        'due_date',
+        'loan_line_ids',
+        'state'
+    )
     def _check_double_booking(self):
         for record in self:
-            if record.state not in ('ongoing', 'late'):
+
+            if not record.loan_date or not record.due_date:
+                continue
+
+            if record.state not in ('draft', 'ongoing', 'late'):
                 continue
 
             for line in record.loan_line_ids:
+
+                if not line.equipment_id or not line.lot_id:
+                    continue
+
                 existing_lines = self.env['equipment.loan.line'].search([
                     ('id', '!=', line.id),
-                    ('equipment_id', '=', line.equipment_id.id),
-                    ('loan_id.state', 'in', ('ongoing', 'late')),
+                    ('lot_id', '=', line.lot_id.id),
+                    ('loan_id.state', 'in', ('draft', 'ongoing', 'late')),
+                    ('loan_id.loan_date', '<', record.due_date),
+                    ('loan_id.due_date', '>', record.loan_date),
                 ], limit=1)
 
                 if existing_lines:
+                    existing_loan = existing_lines.loan_id
+
                     raise ValidationError(
-                        f'Alat "{line.equipment_id.name}" sedang dipinjam '
-                        'dan tidak dapat dipinjam kembali.'
+                        f'Serial Number "{line.lot_id.name}" '
+                        f'sudah memiliki booking pada periode '
+                        f'{existing_loan.loan_date} sampai '
+                        f'{existing_loan.due_date}. '
+                        f'Periode yang dipilih bertabrakan.'
                     )
 
     def _get_loan_location(self):
@@ -198,16 +230,28 @@ class EquipmentLoan(models.Model):
 
     def _create_and_validate_picking(self, src_location, dest_location):
         self.ensure_one()
+
         picking_type = self._get_internal_picking_type()
 
-        move_lines = [(0, 0, {
-            'name': line.equipment_id.name,
-            'product_id': line.equipment_id.id,
-            'product_uom_qty': 1,
-            'product_uom': line.equipment_id.uom_id.id,
-            'location_id': src_location.id,
-            'location_dest_id': dest_location.id,
-        }) for line in self.loan_line_ids]
+        move_vals = []
+
+        for line in self.loan_line_ids:
+
+            if not line.lot_id:
+                raise ValidationError(
+                    f'Serial Number wajib dipilih untuk '
+                    f'alat "{line.equipment_id.name}".'
+                )
+
+            move_vals.append((0, 0, {
+                'name': line.equipment_id.name,
+                'product_id': line.equipment_id.id,
+                'product_uom_qty': 1,
+                'product_uom': line.equipment_id.uom_id.id,
+                'location_id': src_location.id,
+                'location_dest_id': dest_location.id,
+                'loan_line_id': line.id,
+            }))
 
         picking = self.env['stock.picking'].create({
             'partner_id': self.borrower_id.id,
@@ -216,13 +260,39 @@ class EquipmentLoan(models.Model):
             'location_dest_id': dest_location.id,
             'origin': self.name,
             'loan_id': self.id,
-            'move_ids': move_lines,
+            'move_ids': move_vals,
         })
 
         picking.action_confirm()
         picking.action_assign()
+
         for move in picking.move_ids:
-            move.quantity = move.product_uom_qty
+
+            loan_line = move.loan_line_id
+
+            if not loan_line:
+                raise ValidationError(
+                    f'Move untuk produk "{move.product_id.name}" '
+                    'tidak memiliki Equipment Loan Line.'
+                )
+
+            move_line = move.move_line_ids[:1]
+
+            if not move_line:
+                move_line = self.env['stock.move.line'].create({
+                    'move_id': move.id,
+                    'picking_id': picking.id,
+                    'product_id': move.product_id.id,
+                    'product_uom_id': move.product_uom.id,
+                    'location_id': src_location.id,
+                    'location_dest_id': dest_location.id,
+                })
+
+            move_line.write({
+                'lot_id': loan_line.lot_id.id,
+                'quantity': 1,
+            })
+
         picking.button_validate()
 
         return picking
@@ -247,20 +317,42 @@ class EquipmentLoan(models.Model):
 
             for line in record.loan_line_ids:
 
+                if not line.lot_id:
+                    raise ValidationError(
+                        f'Serial Number wajib dipilih untuk '
+                        f'alat "{line.equipment_id.name}".'
+                    )
+
+                if line.lot_id.product_id != line.equipment_id:
+                    raise ValidationError(
+                        f'Serial Number "{line.lot_id.name}" bukan milik '
+                        f'produk "{line.equipment_id.name}".'
+                    )
+
+                if line.equipment_id.tracking != 'serial':
+                    raise ValidationError(
+                        f'Produk "{line.equipment_id.name}" belum menggunakan '
+                        'Tracking "By Unique Serial Number".'
+                    )
+
+                available_qty = self.env['stock.quant']._get_available_quantity(
+                    line.equipment_id,
+                    src_location,
+                    lot_id=line.lot_id,
+                    strict=True,
+                )
+
+                if available_qty < 1:
+                    raise ValidationError(
+                        f'Serial Number "{line.lot_id.name}" '
+                        f'untuk alat "{line.equipment_id.name}" '
+                        'tidak tersedia di lokasi stok.'
+                    )
+
                 if line.equipment_id.is_damaged:
                     raise ValidationError(
                         f'Alat "{line.equipment_id.name}" dalam kondisi '
                         'rusak dan tidak dapat dipinjam.'
-                    )
-
-                available_qty = line.equipment_id.with_context(
-                    location=src_location.id
-                ).qty_available
-
-                if available_qty < 1:
-                    raise ValidationError(
-                        f'Alat "{line.equipment_id.name}" tidak tersedia '
-                        'di stok (quantity available = 0).'
                     )
 
             record._create_and_validate_picking(src_location, loan_location)
@@ -355,16 +447,58 @@ class EquipmentLoan(models.Model):
     def _cron_check_overdue(self):
         today = fields.Date.context_today(self)
 
-        loans = self.search([
+        tomorrow = fields.Date.add(today, days=1)
+
+        reminder_loans = self.search([
             ('state', '=', 'ongoing'),
-            ('due_date', '<', today),
+            ('due_date', '=', tomorrow),
+            ('reminder_email_sent', '=', False),
         ])
 
-        if loans:
-            loans.write({
-                'state': 'late',
-                'line_notes': 'kamu sudah terlambat'
-            })
+        reminder_template = self.env.ref(
+            'equipment_loan_tracker.mail_template_equipment_loan_reminder',
+            raise_if_not_found=False
+        )
+
+        if reminder_template:
+            for loan in reminder_loans:
+
+                if not loan.borrower_id.email:
+                    continue
+
+                reminder_template.send_mail(
+                    loan.id,
+                    force_send=True
+                )
+
+                loan.reminder_email_sent = True
+
+        overdue_loans = self.search([
+            ('state', 'in', ('ongoing', 'late')),
+            ('due_date', '<', today),
+            ('overdue_email_sent', '=', False),
+        ])
+
+        overdue_template = self.env.ref(
+            'equipment_loan_tracker.mail_template_equipment_loan_overdue',
+            raise_if_not_found=False
+        )
+
+        for loan in overdue_loans:
+
+            if loan.state == 'ongoing':
+                loan.write({
+                    'state': 'late',
+                    'line_notes': 'kamu sudah terlambat',
+                })
+
+            if overdue_template and loan.borrower_id.email:
+                overdue_template.send_mail(
+                    loan.id,
+                    force_send=True
+                )
+
+                loan.overdue_email_sent = True
 
     @api.depends('loan_date', 'return_date')
     def _compute_loan_duration(self):
@@ -387,6 +521,24 @@ class EquipmentLoan(models.Model):
                 record.loan_line_ids.mapped('equipment_id.name')
             )
 
+    @api.constrains('equipment_id', 'lot_id')
+    def _check_lot_product(self):
+        for line in self:
+            if not line.lot_id:
+                continue
+
+            if line.lot_id.product_id != line.equipment_id:
+                raise ValidationError(
+                    f'Serial Number "{line.lot_id.name}" bukan milik '
+                    f'produk "{line.equipment_id.name}".'
+                )
+
+            if line.equipment_id.tracking != 'serial':
+                raise ValidationError(
+                    f'Produk "{line.equipment_id.name}" belum menggunakan '
+                    'Tracking "By Unique Serial Number".'
+                )
+
 
 class EquipmentLoanLine(models.Model):
     _name = 'equipment.loan.line'
@@ -405,4 +557,11 @@ class EquipmentLoanLine(models.Model):
         required=True,
         ondelete='restrict',
         domain=[('is_storable', '=', True)],
+    )
+
+    lot_id = fields.Many2one(
+        'stock.lot',
+        string='Serial Number',
+        ondelete='restrict',
+        domain="[('product_id', '=', equipment_id)]",
     )

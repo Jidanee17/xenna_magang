@@ -36,30 +36,38 @@
                             </tr>
 
                             <tr>
-                                <td style="width: 35%;">
-                                    <strong>Peminjam</strong>
-                                </td>
-                                <td>
-                                    :
-                                    <span t-field="loan.borrower_id"/>
-                                </td>
-                            </tr>
-
-                            <tr>
                                 <td>
                                     <strong>Alat</strong>
                                 </td>
                                 <td>
                                     :
-                                    <table style="display: inline-table; vertical-align: top; border-collapse: collapse;">
-                                        <tr t-foreach="loan.loan_line_ids" t-as="line">
-                                            <td style="padding: 0 4px 0 0; vertical-align: top; white-space: nowrap;">
-                                                <span t-esc="line_index + 1"/>.
-                                            </td>
-                                            <td style="padding: 0; vertical-align: top;">
-                                                <span t-field="line.equipment_id.name"/>
-                                            </td>
-                                        </tr>
+                                    <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align: left; padding: 4px; border-bottom: 1px solid #000;">
+                                                    No
+                                                </th>
+                                                <th style="text-align: left; padding: 4px; border-bottom: 1px solid #000;">
+                                                    Alat
+                                                </th>
+                                                <th style="text-align: left; padding: 4px; border-bottom: 1px solid #000;">
+                                                    Serial Number
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="loan.loan_line_ids" t-as="line">
+                                                <td style="padding: 4px;">
+                                                    <span t-esc="line_index + 1"/>
+                                                </td>
+                                                <td style="padding: 4px;">
+                                                    <span t-field="line.equipment_id.name"/>
+                                                </td>
+                                                <td style="padding: 4px;">
+                                                    <span t-field="line.lot_id.name"/>
+                                                </td>
+                                            </tr>
+                                        </tbody>
                                     </table>
                                 </td>
                             </tr>
