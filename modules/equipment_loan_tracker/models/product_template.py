@@ -21,3 +21,12 @@ class ProductTemplate(models.Model):
             'memakai Sales Price (list_price) sebagai basis denda.'
         )
     )
+
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+    equipment_loan_line_ids = fields.One2many(
+        'equipment.loan.line',
+        'equipment_id',
+        string='Equipment Loan Lines',
+    )

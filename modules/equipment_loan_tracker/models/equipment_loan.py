@@ -4,6 +4,7 @@ from odoo.exceptions import ValidationError, UserError
 
 class EquipmentLoan(models.Model):
     _name = 'equipment.loan'
+    _inherit = ['portal.mixin']
     _description = 'Equipment Loan'
     _order = 'loan_date desc, id desc'
 

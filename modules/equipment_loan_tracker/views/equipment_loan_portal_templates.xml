@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="portal_my_equipment_loans" name="My Equipment Loans">
+        <t t-call="portal.portal_layout">
+
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="container">
+                <h3 class="mb-4">
+                    My Equipment Loans
+                </h3>
+
+                <t t-if="loans">
+                    <div class="table-responsive">
+                        <table class="table table-hover o_portal_my_doc_table">
+                            <thead>
+                                <tr>
+                                    <th>Nomor Peminjaman</th>
+                                    <th>Tanggal Pinjam</th>
+                                    <th>Jatuh Tempo</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <t t-foreach="loans" t-as="loan">
+                                    <tr>
+                                        <td>
+                                            <a t-att-href="'/my/equipment-loans/%s' % loan.id">
+                                                <t t-esc="loan.name"/>
+                                            </a>
+                                        </td>
+
+                                        <td>
+                                            <span t-field="loan.loan_date"/>
+                                        </td>
+
+                                        <td>
+                                            <span t-field="loan.due_date"/>
+                                        </td>
+
+                                        <td>
+                                            <span t-esc="dict(
+                                                draft='Draft',
+                                                ongoing='Ongoing',
+                                                returned='Returned',
+                                                late='Late',
+                                                lost='Lost'
+                                            ).get(loan.state, loan.state)"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+
+                <t t-else="">
+                    <div class="alert alert-info">
+                        Belum ada data peminjaman.
+                    </div>
+                </t>
+
+            </div>
+
+        </t>
+    </template>
+
+    <template id="portal_equipment_loan_detail" name="Equipment Loan Detail">
+        <t t-call="portal.portal_layout">
+
+            <div class="container">
+                <div class="mb-4">
+                    <a href="/my/equipment-loans" class="btn btn-secondary">
+                        ← Kembali ke Peminjaman
+                    </a>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <t t-esc="loan.name"/>
+                        </h3>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+                                <strong>Peminjam</strong>
+                                <div>
+                                    <t t-esc="loan.borrower_id.name"/>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <strong>Status</strong>
+                                <div>
+                                    <span t-esc="dict(
+                                            draft='Draft',
+                                            ongoing='Ongoing',
+                                            returned='Returned',
+                                            late='Late',
+                                            lost='Lost'
+                                        ).get(loan.state, loan.state)"/>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <strong>Tanggal Peminjaman</strong>
+                                <div>
+                                    <span t-field="loan.loan_date"/>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <strong>Jatuh Tempo</strong>
+                                <div>
+                                    <span t-field="loan.due_date"/>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <strong>Tanggal Pengembalian</strong>
+                                <div>
+                                    <t t-if="loan.return_date">
+                                        <span t-field="loan.return_date"/>
+                                    </t>
+                                    <t t-else="">
+                                        -
+                                    </t>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Alat yang Dipinjam</h4>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Alat</th>
+                                        <th>Serial Number</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    <t t-foreach="loan.loan_line_ids" t-as="line">
+                                        <tr>
+                                            <td>
+                                                <t t-esc="line.equipment_id.display_name"/>
+                                            </td>
+
+                                            <td>
+                                                <t t-if="line.lot_id">
+                                                    <t t-esc="line.lot_id.name"/>
+                                                </t>
+                                                <t t-else="">
+                                                    -
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <t t-if="loan.invoice_ids">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4 class="mb-0">Invoice</h4>
+                        </div>
+
+                        <div class="card-body">
+                            <t t-foreach="loan.invoice_ids" t-as="invoice">
+                                <div class="mb-2">
+                                    <strong>
+                                        <t t-esc="invoice.name"/>
+                                    </strong>
+
+                                    <span class="ms-2">
+                                        <t t-esc="invoice.state"/>
+                                    </span>
+
+                                    <a
+                                            t-att-href="'/my/invoices/%s' % invoice.id"
+                                            class="btn btn-sm btn-primary ms-2"
+                                    >
+                                        Lihat Invoice
+                                    </a>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </t>
+            </div>
+        </t>
+    </template>
+</odoo>
