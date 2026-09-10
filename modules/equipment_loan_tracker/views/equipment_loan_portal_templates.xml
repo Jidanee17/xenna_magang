@@ -3,56 +3,80 @@
 
     <template id="portal_my_equipment_loans" name="My Equipment Loans">
         <t t-call="portal.portal_layout">
-
             <t t-set="breadcrumbs_searchbar" t-value="True"/>
-
             <div class="container">
-                <h3 class="mb-4">
-                    My Equipment Loans
-                </h3>
+                <div class="mb-4">
+                    <h3 class="mb-3">
+                        My Equipment Loans
+                    </h3>
+                    <a
+                            href="/my/equipment-loans/new"
+                            class="btn btn-primary"
+                    >
+                        + New Booking
+                    </a>
+                </div>
 
                 <t t-if="loans">
-                    <div class="table-responsive">
-                        <table class="table table-hover o_portal_my_doc_table">
-                            <thead>
-                                <tr>
-                                    <th>Nomor Peminjaman</th>
-                                    <th>Tanggal Pinjam</th>
-                                    <th>Jatuh Tempo</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="mb-0">
+                                Daftar Peminjaman
+                            </h4>
+                        </div>
 
-                            <tbody>
-                                <t t-foreach="loans" t-as="loan">
-                                    <tr>
-                                        <td>
-                                            <a t-att-href="'/my/equipment-loans/%s' % loan.id">
-                                                <t t-esc="loan.name"/>
-                                            </a>
-                                        </td>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover o_portal_my_doc_table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Nomor Peminjaman</th>
+                                            <th>Tanggal Pinjam</th>
+                                            <th>Jatuh Tempo</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
 
-                                        <td>
-                                            <span t-field="loan.loan_date"/>
-                                        </td>
+                                    <tbody>
+                                        <t t-foreach="loans" t-as="loan">
+                                            <tr>
+                                                <td>
+                                                    <a
+                                                            t-att-href="'/my/equipment-loans/%s' % loan.id"
+                                                    >
+                                                        <t t-esc="loan.name"/>
+                                                    </a>
+                                                </td>
 
-                                        <td>
-                                            <span t-field="loan.due_date"/>
-                                        </td>
+                                                <td>
+                                                    <span t-field="loan.loan_date"/>
+                                                </td>
 
-                                        <td>
-                                            <span t-esc="dict(
-                                                draft='Draft',
-                                                ongoing='Ongoing',
-                                                returned='Returned',
-                                                late='Late',
-                                                lost='Lost'
-                                            ).get(loan.state, loan.state)"/>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
+                                                <td>
+                                                    <span t-field="loan.due_date"/>
+                                                </td>
+
+                                                <td>
+                                                    <span t-esc="dict(
+                                                        draft='Draft',
+                                                        pending='Pending Approval',
+                                                        reserved='Reserved',
+                                                        ongoing='Ongoing',
+                                                        returned='Returned',
+                                                        late='Late',
+                                                        lost='Lost',
+                                                        cancelled='Cancelled'
+                                                    ).get(
+                                                        loan.state,
+                                                        loan.state
+                                                    )"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </t>
 
@@ -138,6 +162,82 @@
                 </div>
 
                 <div class="card mb-4">
+                    <div class="card-body">
+                        <t t-if="loan.state in ('ongoing', 'late')">
+                            <t t-if="pending_extension">
+                                <div class="alert alert-warning mb-0">
+                                    Anda memiliki pengajuan perpanjangan
+                                    yang masih menunggu persetujuan.
+                                </div>
+                            </t>
+
+                            <t t-else="">
+                                <a
+                                        t-att-href="'/my/equipment-loans/%s/extension' % loan.id"
+                                        class="btn btn-primary"
+                                >
+                                    Request Extension
+                                </a>
+                            </t>
+                        </t>
+                    </div>
+                </div>
+
+                <t t-if="extensions">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4 class="mb-0">
+                                Extension Request History
+                            </h4>
+                        </div>
+
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Pengajuan</th>
+                                            <th>Jatuh Tempo Saat Ini</th>
+                                            <th>Jatuh Tempo Baru</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        <t t-foreach="extensions" t-as="extension">
+                                            <tr>
+                                                <td>
+                                                    <t t-esc="extension.name"/>
+                                                </td>
+
+                                                <td>
+                                                    <t t-esc="extension.current_due_date"/>
+                                                </td>
+
+                                                <td>
+                                                    <t t-esc="extension.requested_due_date"/>
+                                                </td>
+
+                                                <td>
+                                                    <span t-esc="dict(
+                                                        pending='Pending',
+                                                        approved='Approved',
+                                                        rejected='Rejected'
+                                                    ).get(
+                                                        extension.state,
+                                                        extension.state
+                                                    )"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+
+                <div class="card mb-4">
                     <div class="card-header">
                         <h4 class="mb-0">Alat yang Dipinjam</h4>
                     </div>
@@ -206,4 +306,249 @@
             </div>
         </t>
     </template>
+
+    <template
+            id="portal_my_home_equipment_loan"
+            name="Equipment Loans"
+            inherit_id="portal.portal_my_home"
+            customize_show="True"
+            priority="30"
+    >
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+
+            <div class="o_portal_category row g-2 mt-3" id="portal_equipment_loan_category">
+
+                <t t-call="portal.portal_docs_entry">
+
+                    <t t-set="title">Equipment Loans</t>
+
+                    <t t-set="text">
+                        View your equipment loan transactions
+                    </t>
+
+                    <t t-set="url" t-value="'/my/equipment-loans'"/>
+
+                    <t t-set="config_card" t-value="True"/>
+
+                </t>
+
+            </div>
+
+        </xpath>
+    </template>
+    <template id="portal_equipment_loan_new" name="New Equipment Loan">
+        <t t-call="portal.portal_layout">
+            <div class="container">
+                <div class="mb-4">
+                    <a href="/my/equipment-loans" class="btn btn-secondary">
+                        ← Kembali ke Peminjaman
+                    </a>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            New Equipment Booking
+                        </h3>
+                    </div>
+
+                    <div class="card-body">
+                        <form
+                                action="/my/equipment-loans/create"
+                                method="POST"
+                        >
+                            <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    t-att-value="request.csrf_token()"
+                            />
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Alat
+                                </label>
+
+                                <select
+                                        name="equipment_id"
+                                        class="form-select"
+                                        required="required"
+                                >
+                                    <option value="">
+                                        Pilih alat
+                                    </option>
+
+                                    <t t-foreach="products" t-as="product">
+                                        <option
+                                                t-att-value="product.id"
+                                        >
+                                            <t t-esc="product.display_name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Serial Number
+                                </label>
+
+                                <select
+                                        name="lot_id"
+                                        class="form-select"
+                                        required="required"
+                                >
+                                    <option value="">
+                                        Pilih Serial Number
+                                    </option>
+
+                                    <t t-foreach="lots" t-as="lot">
+                                        <option
+                                                t-att-value="lot.id"
+                                        >
+                                            <t t-esc="lot.product_id.display_name"/>
+                                            —
+                                            <t t-esc="lot.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="row">
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">
+                                        Tanggal Peminjaman
+                                    </label>
+
+                                    <input
+                                            type="date"
+                                            name="loan_date"
+                                            class="form-control"
+                                            required="required"
+                                    />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">
+                                        Tanggal Jatuh Tempo
+                                    </label>
+
+                                    <input
+                                            type="date"
+                                            name="due_date"
+                                            class="form-control"
+                                            required="required"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                >
+                                    Ajukan Booking
+                                </button>
+                                <a
+                                        href="/my/equipment-loans"
+                                        class="btn btn-secondary ms-2"
+                                >
+                                    Batal
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template
+            id="portal_equipment_loan_extension"
+            name="Equipment Loan Extension"
+    >
+        <t t-call="portal.portal_layout">
+            <div class="container my-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Request Extension</h2>
+                    <a
+                            t-att-href="'/my/equipment-loans/%s' % loan.id"
+                            class="btn btn-secondary"
+                    >
+                        Back
+                    </a>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <t t-out="loan.name"/>
+                        </h5>
+
+                        <p>
+                            <strong>Jatuh Tempo Saat Ini:</strong>
+                            <t t-out="loan.due_date"/>
+                        </p>
+
+                        <form
+                                t-att-action="'/my/equipment-loans/%s/extension/create' % loan.id"
+                                method="post"
+                        >
+
+                            <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    t-att-value="request.csrf_token()"
+                            />
+
+                            <div class="mb-3">
+
+                                <label
+                                        for="requested_due_date"
+                                        class="form-label"
+                                >
+                                    Jatuh Tempo Baru
+                                </label>
+
+                                <input
+                                        type="date"
+                                        id="requested_due_date"
+                                        name="requested_due_date"
+                                        class="form-control"
+                                        required="required"
+                                />
+
+                            </div>
+
+                            <div class="mb-3">
+                                <label
+                                        for="reason"
+                                        class="form-label"
+                                >
+                                    Alasan Perpanjangan
+                                </label>
+
+                                <textarea
+                                        id="reason"
+                                        name="reason"
+                                        class="form-control"
+                                        rows="4"
+                                        placeholder="Masukkan alasan perpanjangan..."
+                                ></textarea>
+
+                            </div>
+
+                            <button
+                                    type="submit"
+                                    class="btn btn-primary"
+                            >
+                                Submit Request
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
 </odoo>

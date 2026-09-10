@@ -123,4 +123,116 @@
         </field>
     </record>
 
+    <record id="mail_template_equipment_loan_extension_approved" model="mail.template">
+        <field name="name">Equipment Loan Extension - Approved</field>
+        <field name="model_id" ref="model_equipment_loan_extension"/>
+        <field name="subject">Pengajuan Perpanjangan Disetujui - {{ object.loan_id.name }}</field>
+        <field name="email_from">{{ user.email_formatted or user.company_id.email or '' }}</field>
+        <field name="email_to">{{ object.loan_id.borrower_id.email or '' }}</field>
+        <field name="body_html" type="html">
+            <div>
+                <p>
+                    Halo
+                    <strong>
+                        <t t-out="object.loan_id.borrower_id.name"/>
+                    </strong>
+                    ,
+                </p>
+
+                <p>
+                    Pengajuan perpanjangan peminjaman alat Anda
+                    telah <strong>disetujui</strong>.
+                </p>
+
+                <p>
+                    <strong>Nomor Peminjaman:</strong>
+                    <t t-out="object.loan_id.name"/>
+                </p>
+
+                <p>
+                    <strong>Jatuh Tempo Sebelumnya:</strong>
+                    <t t-out="object.current_due_date"/>
+                </p>
+
+                <p>
+                    <strong>Jatuh Tempo Baru:</strong>
+                    <t t-out="object.requested_due_date"/>
+                </p>
+
+                <p>
+                    <strong>Daftar Alat:</strong>
+                </p>
+
+                <ul>
+                    <t t-foreach="object.loan_id.loan_line_ids" t-as="line">
+                        <li>
+                            <t t-out="line.equipment_id.display_name"/>
+                            —
+                            Serial:
+                            <t t-out="line.lot_id.name"/>
+                        </li>
+                    </t>
+                </ul>
+
+                <p>
+                    Silakan mengembalikan alat paling lambat
+                    pada tanggal jatuh tempo baru.
+                </p>
+
+                <p>Terima kasih.</p>
+            </div>
+        </field>
+    </record>
+
+
+    <record id="mail_template_equipment_loan_extension_rejected" model="mail.template">
+        <field name="name">Equipment Loan Extension - Rejected</field>
+        <field name="model_id" ref="model_equipment_loan_extension"/>
+        <field name="subject">Pengajuan Perpanjangan Ditolak - {{ object.loan_id.name }}</field>
+        <field name="email_from">{{ user.email_formatted or user.company_id.email or '' }}</field>
+        <field name="email_to">{{ object.loan_id.borrower_id.email or '' }}</field>
+
+        <field name="body_html" type="html">
+            <div>
+                <p>
+                    Halo
+                    <strong>
+                        <t t-out="object.loan_id.borrower_id.name"/>
+                    </strong>
+                    ,
+                </p>
+
+                <p>
+                    Mohon maaf, pengajuan perpanjangan peminjaman alat Anda saat ini
+                    <strong>belum dapat disetujui</strong>.
+                </p>
+
+                <p>
+                    <strong>Nomor Peminjaman:</strong>
+                    <t t-out="object.loan_id.name"/>
+                </p>
+
+                <p>
+                    <strong>Jatuh Tempo Saat Ini:</strong>
+                    <t t-out="object.current_due_date"/>
+                </p>
+                <p>
+                    <strong>Tanggal yang Diajukan:</strong>
+                    <t t-out="object.requested_due_date"/>
+                </p>
+                <p>
+                    <strong>Alasan Pengajuan:</strong>
+                </p>
+                <p>
+                    <t t-out="object.reason or '-'"/>
+                </p>
+                <p>
+                    Silakan menghubungi administrator jika membutuhkan
+                    informasi lebih lanjut.
+                </p>
+                <p>Terima kasih.</p>
+            </div>
+        </field>
+    </record>
+
 </odoo>

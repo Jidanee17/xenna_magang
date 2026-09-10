@@ -72,10 +72,13 @@ class EquipmentLoan(models.Model):
     state = fields.Selection(
         selection=[
             ('draft', 'Draft'),
+            ('pending', 'Pending Approval'),
+            ('reserved', 'Reserved'),
             ('ongoing', 'Ongoing'),
             ('returned', 'Returned'),
             ('late', 'Late'),
             ('lost', 'Lost'),
+            ('cancelled', 'Cancelled'),
         ],
         string='Status',
         default='draft',
@@ -99,7 +102,7 @@ class EquipmentLoan(models.Model):
     )
 
     equipment_names = fields.Char(
-        string='Daftar Alat',
+        string='Nama Alat',
         compute='_compute_equipment_names'
     )
 
@@ -177,7 +180,12 @@ class EquipmentLoan(models.Model):
             if not record.loan_date or not record.due_date:
                 continue
 
-            if record.state not in ('draft', 'ongoing', 'late'):
+            if record.state not in (
+                    'pending',
+                    'reserved',
+                    'ongoing',
+                    'late',
+            ):
                 continue
 
             for line in record.loan_line_ids:
@@ -188,7 +196,12 @@ class EquipmentLoan(models.Model):
                 existing_lines = self.env['equipment.loan.line'].search([
                     ('id', '!=', line.id),
                     ('lot_id', '=', line.lot_id.id),
-                    ('loan_id.state', 'in', ('draft', 'ongoing', 'late')),
+                    ('loan_id.state', 'in', (
+                        'pending',
+                        'reserved',
+                        'ongoing',
+                        'late',
+                    )),
                     ('loan_id.loan_date', '<', record.due_date),
                     ('loan_id.due_date', '>', record.loan_date),
                 ], limit=1)
@@ -298,6 +311,102 @@ class EquipmentLoan(models.Model):
 
         return picking
 
+    def action_approve(self):
+        for record in self:
+
+            if record.state != 'pending':
+                raise ValidationError(
+                    'Hanya peminjaman dengan status Pending '
+                    'yang dapat disetujui.'
+                )
+
+            if not record.loan_line_ids:
+                raise ValidationError(
+                    'Minimal harus ada satu alat yang dipinjam.'
+                )
+
+            if record.due_date < record.loan_date:
+                raise ValidationError(
+                    'Tanggal jatuh tempo tidak boleh lebih awal '
+                    'dari tanggal peminjaman.'
+                )
+
+            picking_type = record._get_internal_picking_type()
+            src_location = picking_type.default_location_src_id
+            loan_location = record._get_loan_location()
+
+            for line in record.loan_line_ids:
+
+                if not line.lot_id:
+                    raise ValidationError(
+                        f'Serial Number wajib dipilih untuk '
+                        f'alat "{line.equipment_id.name}".'
+                    )
+
+                if line.lot_id.product_id != line.equipment_id:
+                    raise ValidationError(
+                        f'Serial Number "{line.lot_id.name}" bukan milik '
+                        f'produk "{line.equipment_id.name}".'
+                    )
+
+                if line.equipment_id.tracking != 'serial':
+                    raise ValidationError(
+                        f'Produk "{line.equipment_id.name}" belum menggunakan '
+                        'Tracking "By Unique Serial Number".'
+                    )
+
+                if line.equipment_id.is_damaged:
+                    raise ValidationError(
+                        f'Alat "{line.equipment_id.name}" dalam kondisi '
+                        'rusak dan tidak dapat dipinjam.'
+                    )
+
+            today = fields.Date.context_today(self)
+
+            if record.loan_date > today:
+                record.write({
+                    'state': 'reserved'
+                })
+                continue
+
+            for line in record.loan_line_ids:
+
+                available_qty = self.env['stock.quant']._get_available_quantity(
+                    line.equipment_id,
+                    src_location,
+                    lot_id=line.lot_id,
+                    strict=True,
+                )
+
+                if available_qty < 1:
+                    raise ValidationError(
+                        f'Serial Number "{line.lot_id.name}" '
+                        f'untuk alat "{line.equipment_id.name}" '
+                        'tidak tersedia di lokasi stok.'
+                    )
+
+            record._create_and_validate_picking(
+                src_location,
+                loan_location
+            )
+
+            record.write({
+                'state': 'ongoing'
+            })
+
+    def action_reject(self):
+        for record in self:
+
+            if record.state != 'pending':
+                raise ValidationError(
+                    'Hanya peminjaman dengan status Pending '
+                    'yang dapat ditolak.'
+                )
+
+            record.write({
+                'state': 'cancelled'
+            })
+
     def action_confirm(self):
         for record in self:
 
@@ -336,6 +445,22 @@ class EquipmentLoan(models.Model):
                         'Tracking "By Unique Serial Number".'
                     )
 
+                if line.equipment_id.is_damaged:
+                    raise ValidationError(
+                        f'Alat "{line.equipment_id.name}" dalam kondisi '
+                        'rusak dan tidak dapat dipinjam.'
+                    )
+
+            today = fields.Date.context_today(self)
+
+            if record.loan_date > today:
+                record.write({
+                    'state': 'reserved'
+                })
+                continue
+
+            for line in record.loan_line_ids:
+
                 available_qty = self.env['stock.quant']._get_available_quantity(
                     line.equipment_id,
                     src_location,
@@ -350,15 +475,14 @@ class EquipmentLoan(models.Model):
                         'tidak tersedia di lokasi stok.'
                     )
 
-                if line.equipment_id.is_damaged:
-                    raise ValidationError(
-                        f'Alat "{line.equipment_id.name}" dalam kondisi '
-                        'rusak dan tidak dapat dipinjam.'
-                    )
+            record._create_and_validate_picking(
+                src_location,
+                loan_location
+            )
 
-            record._create_and_validate_picking(src_location, loan_location)
-
-            record.write({'state': 'ongoing'})
+            record.write({
+                'state': 'ongoing'
+            })
 
     def action_return(self):
         for record in self:
@@ -448,6 +572,38 @@ class EquipmentLoan(models.Model):
     def _cron_check_overdue(self):
         today = fields.Date.context_today(self)
 
+        reserved_loans = self.search([
+            ('state', '=', 'reserved'),
+            ('loan_date', '<=', today),
+        ])
+        for record in reserved_loans:
+            picking_type = record._get_internal_picking_type()
+            src_location = picking_type.default_location_src_id
+            loan_location = record._get_loan_location()
+            can_activate = True
+            for line in record.loan_line_ids:
+                available_qty = self.env['stock.quant']._get_available_quantity(
+                    line.equipment_id,
+                    src_location,
+                    lot_id=line.lot_id,
+                    strict=True,
+                )
+                if available_qty < 1:
+                    can_activate = False
+                    break
+            if not can_activate:
+                continue
+            record._create_and_validate_picking(
+                src_location,
+                loan_location
+            )
+
+            record.write({
+
+                'state': 'ongoing',
+
+            })
+
         tomorrow = fields.Date.add(today, days=1)
 
         reminder_loans = self.search([
@@ -522,24 +678,6 @@ class EquipmentLoan(models.Model):
                 record.loan_line_ids.mapped('equipment_id.name')
             )
 
-    @api.constrains('equipment_id', 'lot_id')
-    def _check_lot_product(self):
-        for line in self:
-            if not line.lot_id:
-                continue
-
-            if line.lot_id.product_id != line.equipment_id:
-                raise ValidationError(
-                    f'Serial Number "{line.lot_id.name}" bukan milik '
-                    f'produk "{line.equipment_id.name}".'
-                )
-
-            if line.equipment_id.tracking != 'serial':
-                raise ValidationError(
-                    f'Produk "{line.equipment_id.name}" belum menggunakan '
-                    'Tracking "By Unique Serial Number".'
-                )
-
 
 class EquipmentLoanLine(models.Model):
     _name = 'equipment.loan.line'
@@ -566,3 +704,22 @@ class EquipmentLoanLine(models.Model):
         ondelete='restrict',
         domain="[('product_id', '=', equipment_id)]",
     )
+
+    @api.constrains('equipment_id', 'lot_id')
+    def _check_lot_product(self):
+        for line in self:
+
+            if not line.lot_id:
+                continue
+
+            if line.lot_id.product_id != line.equipment_id:
+                raise ValidationError(
+                    f'Serial Number "{line.lot_id.name}" bukan milik '
+                    f'produk "{line.equipment_id.name}".'
+                )
+
+            if line.equipment_id.tracking != 'serial':
+                raise ValidationError(
+                    f'Produk "{line.equipment_id.name}" belum menggunakan '
+                    'Tracking "By Unique Serial Number".'
+                )
